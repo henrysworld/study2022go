@@ -3,7 +3,7 @@ package helloworld;
 
 option go_package = "github.com/henrysworld/study2022go/ch37/cmd/helloworld";
 
-service Greeter {
+service Student {
     rpc SayHello (HelloRequest) returns (HelloResponse) {}
 }
 

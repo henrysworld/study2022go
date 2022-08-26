@@ -10,11 +10,11 @@ import (
 )
 
 var (
-	port = ":50052"
+	port = ":50051"
 )
 
 type server struct {
-	pb.UnimplementedGreeterServer
+	pb.UnimplementedStudentServer
 }
 
 func (s *server) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.HelloResponse, error) {
@@ -29,9 +29,9 @@ func main() {
 	}
 
 	s := grpc.NewServer()
-	pb.RegisterGreeterServer(s, &server{})
+	pb.RegisterStudentServer(s, &server{})
 	if err := s.Serve(lis); err != nil {
-		log.Fatalf("failed t o serve: v%", err)
+		log.Fatalf("failed to serve: %v", err)
 	}
 
 }

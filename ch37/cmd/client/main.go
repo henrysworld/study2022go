@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	pb "github.com/henrysworld/study2022go/ch37/cmd/helloworld"
 	"google.golang.org/grpc"
 )
 
@@ -22,7 +23,7 @@ func main() {
 	}
 
 	defer conn.Close()
-	c := pb.NewGreeterClient(conn)
+	c := pb.NewStudentClient(conn)
 
 	name := defaultName
 	if len(os.Args) > 1 {
