@@ -2,11 +2,12 @@ package main
 
 import (
 	"context"
+	"fmt"
+	pb "github.com/henrysworld/study2022go/ch37/cmd/helloworld"
+	"github.com/henrysworld/study2022go/ch37/frame"
+	"github.com/henrysworld/study2022go/ch37/packet"
 	"log"
 	"net"
-
-	pb "github.com/henrysworld/study2022go/ch37/cmd/helloworld"
-	"google.golang.org/grpc"
 )
 
 var (
@@ -22,90 +23,90 @@ func (s *server) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.HelloRe
 	return &pb.HelloResponse{Message: "Hello " + in.GetName()}, nil
 }
 
+//func main() {
+//	lis, err := net.Listen("tcp", port)
+//	if err != nil {
+//		log.Fatalf("failed to listen: %v", err)
+//	}
+//
+//	s := grpc.NewServer()
+//	pb.RegisterStudentServer(s, &server{})
+//	if err := s.Serve(lis); err != nil {
+//		log.Fatalf("failed to serve: %v", err)
+//	}
+//
+//}
+
 func main() {
-	lis, err := net.Listen("tcp", port)
+	l, err := net.Listen("tcp", ":8888")
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		fmt.Println("listen error:", err)
+		return
 	}
 
-	s := grpc.NewServer()
-	pb.RegisterStudentServer(s, &server{})
-	if err := s.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
-	}
+	fmt.Println("server start ok(on *.8888)")
 
+	for {
+		c, err := l.Accept()
+		if err != nil {
+			fmt.Println("accept error:", err)
+			break
+		}
+
+		go handleConn(c)
+	}
 }
 
-// func main() {
-// 	l, err := net.Listen("tcp", ":8888")
-// 	if err != nil {
-// 		fmt.Println("listen error:", err)
-// 		return
-// 	}
+func handleConn(c net.Conn) {
+	defer c.Close()
+	frameCodec := frame.NewMyFrameCodec()
 
-// 	fmt.Println("server start ok(on *.8888)")
+	for {
+		framePayload, err := frameCodec.Decode(c)
+		if err != nil {
+			fmt.Println("handleConn: frame decode error:", err)
+			return
+		}
 
-// 	for {
-// 		c, err := l.Accept()
-// 		if err != nil {
-// 			fmt.Println("accept error:", err)
-// 			break
-// 		}
+		ackFramePayload, err := handlePacket(framePayload)
+		if err != nil {
+			fmt.Println("handleConn: handle packet error", err)
+		}
 
-// 		go handleConn(c)
-// 	}
-// }
+		err = frameCodec.Encode(c, ackFramePayload)
+		if err != nil {
+			fmt.Println("handleConn: frame encode error:", err)
+			return
+		}
+	}
+}
 
-// func handleConn(c net.Conn) {
-// 	defer c.Close()
-// 	frameCodec := frame.NewMyFrameCodec()
+func handlePacket(framePayload []byte) (ackFramePayload []byte, err error) {
+	var p packet.Packet
+	p, err = packet.Decode(framePayload)
+	if err != nil {
+		fmt.Println("handleConn: packet decode error:", err)
+		return
+	}
 
-// 	for {
-// 		framePayload, err := frameCodec.Decode(c)
-// 		if err != nil {
-// 			fmt.Println("handleConn: frame decode error:", err)
-// 			return
-// 		}
+	switch p.(type) {
+	case *packet.Submit:
+		submit := p.(*packet.Submit)
+		fmt.Printf("recv submit: id = %s, payload=%s\n", submit.ID, string(submit.Payload))
+		submitAck := &packet.SubmitAck{
+			ID:     submit.ID,
+			Result: 0,
+		}
 
-// 		ackFramePayload, err := handlePacket(framePayload)
-// 		if err != nil {
-// 			fmt.Println("handleConn: handle packet error", err)
-// 		}
+		ackFramePayload, err = packet.Encode(submitAck)
+		if err != nil {
+			fmt.Println("handleConn: packet encode error:", err)
+			return nil, err
+		}
 
-// 		err = frameCodec.Encode(c, ackFramePayload)
-// 		if err != nil {
-// 			fmt.Println("handleConn: frame encode error:", err)
-// 			return
-// 		}
-// 	}
-// }
+		return ackFramePayload, nil
 
-// func handlePacket(framePayload []byte) (ackFramePayload []byte, err error) {
-// 	var p packet.Packet
-// 	p, err = packet.Decode(framePayload)
-// 	if err != nil {
-// 		fmt.Println("handleConn: packet decode error:", err)
-// 		return
-// 	}
-
-// 	switch p.(type) {
-// 	case *packet.Submit:
-// 		submit := p.(*packet.Submit)
-// 		fmt.Printf("recv submit: id = %s, payload=%s\n", submit.ID, string(submit.Payload))
-// 		submitAck := &packet.SubmitAck{
-// 			ID:     submit.ID,
-// 			Result: 0,
-// 		}
-
-// 		ackFramePayload, err = packet.Encode(submitAck)
-// 		if err != nil {
-// 			fmt.Println("handleConn: packet encode error:", err)
-// 			return nil, err
-// 		}
-
-// 		return ackFramePayload, nil
-
-// 	default:
-// 		return nil, fmt.Errorf("unknow packet type")
-// 	}
-// }
+	default:
+		return nil, fmt.Errorf("unknow packet type")
+	}
+}

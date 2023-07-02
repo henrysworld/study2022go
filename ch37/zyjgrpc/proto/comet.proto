@@ -1,0 +1,75 @@
+syntax = "proto3";
+
+package v1;
+
+import "google/protobuf/timestamp.proto";
+option go_package = "github.com/henrysworld/study2022go/ch37/zyjgrpc";
+
+service Comet {
+  rpc Stream(stream StreamRequest) returns (stream StreamResponse) {};
+  // PushMsg push by key or mid
+  rpc PushMsg(stream PushMsgReq) returns (PushMsgReply) {};
+  // Broadcast send to every enrity
+  rpc Broadcast(BroadcastReq) returns (stream BroadcastReply) {};
+  // BroadcastGroup broadcast to one group
+  rpc BroadcastGroup(BroadcastGroupReq) returns (stream BroadcastGroupReply) {};
+  // Groups get all groups
+  rpc Groups(GroupsReq) returns (stream GroupsReply) {};
+}
+
+
+message PushMsgReq {
+  string message = 1;
+}
+
+message BroadcastReq {
+  string message = 1;
+}
+
+message BroadcastGroupReq {
+  string groupID = 1;
+  string message = 2;
+}
+
+message GroupsReq {}
+
+message StreamRequest {
+  string message = 2;
+}
+
+message PushMsgReply {}
+message BroadcastReply{
+  string message = 1;
+}
+message BroadcastGroupReply{}
+message GroupsReply {
+  map<string, bool> group = 1;
+}
+
+
+
+message StreamResponse {
+  google.protobuf.Timestamp timestamp = 1;
+
+  oneof event {
+    Login    client_login = 2;
+    Logout   client_logout = 3;
+    Message  client_message = 4;
+    Shutdown server_shutdown = 5;
+  }
+
+  message Login {
+    string name = 1;
+  }
+
+  message Logout {
+    string name = 1;
+  }
+
+  message Message {
+    string name = 1;
+    string message = 2;
+  }
+
+  message Shutdown {}
+}

@@ -255,6 +255,7 @@ func (l *zapLogger) Flush() {
 	_ = l.zapLogger.Sync()
 }
 
+// 需要实现所有的Logger方法
 func NewLogger(l *zap.Logger) Logger {
 	return &zapLogger{
 		zapLogger: l,

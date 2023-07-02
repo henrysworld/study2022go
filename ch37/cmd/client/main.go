@@ -1,13 +1,13 @@
 package main
 
 import (
-	"context"
-	"log"
-	"os"
+	"fmt"
+	"github.com/henrysworld/study2022go/ch37/frame"
+	"github.com/henrysworld/study2022go/ch37/packet"
+	"github.com/lucasepe/codename"
+	"net"
+	"sync"
 	"time"
-
-	pb "github.com/henrysworld/study2022go/ch37/cmd/helloworld"
-	"google.golang.org/grpc"
 )
 
 const (
@@ -15,127 +15,127 @@ const (
 	defaultName = "world"
 )
 
+//func main() {
+//
+//	conn, err := grpc.Dial(address, grpc.WithInsecure(), grpc.WithBlock())
+//	if err != nil {
+//		log.Fatalf("did not connect: %v", err)
+//	}
+//
+//	defer conn.Close()
+//	c := pb.NewStudentClient(conn)
+//
+//	name := defaultName
+//	if len(os.Args) > 1 {
+//		name = os.Args[1]
+//	}
+//
+//	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+//	defer cancel()
+//	r, err := c.SayHello(ctx, &pb.HelloRequest{Name: name})
+//	if err != nil {
+//		log.Fatalf("could not greet: %v", err)
+//	}
+//
+//	log.Printf("Greeting: %s", r.Message)
+//}
+
 func main() {
+	var wg sync.WaitGroup
+	var num int = 5
 
-	conn, err := grpc.Dial(address, grpc.WithInsecure(), grpc.WithBlock())
-	if err != nil {
-		log.Fatalf("did not connect: %v", err)
+	wg.Add(num)
+
+	for i := 0; i < num; i++ {
+		go func(i int) {
+			defer wg.Done()
+			startClient(i)
+		}(i + 1)
 	}
-
-	defer conn.Close()
-	c := pb.NewStudentClient(conn)
-
-	name := defaultName
-	if len(os.Args) > 1 {
-		name = os.Args[1]
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-	r, err := c.SayHello(ctx, &pb.HelloRequest{Name: name})
-	if err != nil {
-		log.Fatalf("could not greet: %v", err)
-	}
-
-	log.Printf("Greeting: %s", r.Message)
+	wg.Wait()
 }
 
-// func main() {
-// 	var wg sync.WaitGroup
-// 	var num int = 5
+func startClient(i int) {
+	quit := make(chan struct{})
+	done := make(chan struct{})
+	conn, err := net.Dial("tcp", ":8888")
+	if err != nil {
+		fmt.Println("dial error:", err)
+		return
+	}
+	defer conn.Close()
+	fmt.Printf("[client %d]: dial ok\n", i)
 
-// 	wg.Add(num)
+	// 生成payload
+	rng, err := codename.DefaultRNG()
+	if err != nil {
+		panic(err)
+	}
 
-// 	for i := 0; i < num; i++ {
-// 		go func(i int) {
-// 			defer wg.Done()
-// 			startClient(i)
-// 		}(i + 1)
-// 	}
-// 	wg.Wait()
-// }
+	frameCodec := frame.NewMyFrameCodec()
+	var counter int
 
-// func startClient(i int) {
-// 	quit := make(chan struct{})
-// 	done := make(chan struct{})
-// 	conn, err := net.Dial("tcp", ":8888")
-// 	if err != nil {
-// 		fmt.Println("dial error:", err)
-// 		return
-// 	}
-// 	defer conn.Close()
-// 	fmt.Printf("[client %d]: dial ok\n", i)
+	go func() {
+		// handle ack
+		for {
+			select {
+			case <-quit:
+				done <- struct{}{}
+				return
+			default:
+			}
 
-// 	// 生成payload
-// 	rng, err := codename.DefaultRNG()
-// 	if err != nil {
-// 		panic(err)
-// 	}
+			conn.SetReadDeadline(time.Now().Add(time.Second * 5))
+			ackFramePayLoad, err := frameCodec.Decode(conn)
+			if err != nil {
+				if e, ok := err.(net.Error); ok {
+					if e.Timeout() {
+						continue
+					}
+				}
+				panic(err)
+			}
 
-// 	frameCodec := frame.NewMyFrameCodec()
-// 	var counter int
+			p, err := packet.Decode(ackFramePayLoad)
+			submitAck, ok := p.(*packet.SubmitAck)
+			if !ok {
+				panic("not submitack")
+			}
+			fmt.Printf("[client %d]: the result of submit ack[%s] is %d\n", i, submitAck.ID, submitAck.Result)
+		}
+	}()
 
-// 	go func() {
-// 		// handle ack
-// 		for {
-// 			select {
-// 			case <-quit:
-// 				done <- struct{}{}
-// 				return
-// 			default:
-// 			}
+	for {
+		// send submit
+		counter++
+		id := fmt.Sprintf("%08d", counter) // 8 byte string
+		payload := codename.Generate(rng, 4)
 
-// 			conn.SetReadDeadline(time.Now().Add(time.Second * 5))
-// 			ackFramePayLoad, err := frameCodec.Decode(conn)
-// 			if err != nil {
-// 				if e, ok := err.(net.Error); ok {
-// 					if e.Timeout() {
-// 						continue
-// 					}
-// 				}
-// 				panic(err)
-// 			}
+		s := &packet.Submit{
+			ID: id,
+			// Payload: []byte(payload),
+			Payload: []byte("hello11111" + payload),
+		}
 
-// 			p, err := packet.Decode(ackFramePayLoad)
-// 			submitAck, ok := p.(*packet.SubmitAck)
-// 			if !ok {
-// 				panic("not submitack")
-// 			}
-// 			fmt.Printf("[client %d]: the result of submit ack[%s] is %d\n", i, submitAck.ID, submitAck.Result)
-// 		}
-// 	}()
+		framePayload, err := packet.Encode(s)
+		if err != nil {
+			panic(err)
+		}
 
-// 	for {
-// 		// send submit
-// 		counter++
-// 		id := fmt.Sprintf("%08d", counter) // 8 byte string
-// 		payload := codename.Generate(rng, 4)
+		fmt.Printf("[client %d]: send submit id = %s, payload=%s, frame length = %d\n",
+			i, s.ID, s.Payload, len(framePayload)+4)
 
-// 		s := &packet.Submit{
-// 			ID: id,
-// 			// Payload: []byte(payload),
-// 			Payload: []byte("hello11111" + payload),
-// 		}
+		err = frameCodec.Encode(conn, framePayload)
+		if err != nil {
+			panic(err)
+		}
 
-// 		framePayload, err := packet.Encode(s)
-// 		if err != nil {
-// 			panic(err)
-// 		}
-
-// 		fmt.Printf("[client %d]: send submit id = %s, payload=%s, frame length = %d\n",
-// 			i, s.ID, s.Payload, len(framePayload)+4)
-
-// 		err = frameCodec.Encode(conn, framePayload)
-// 		if err != nil {
-// 			panic(err)
-// 		}
-
-// 		time.Sleep(1 * time.Second)
-// 		if counter >= 10 {
-// 			quit <- struct{}{}
-// 			<-done
-// 			fmt.Printf("[client %d]: exit ok\n", i)
-// 			return
-// 		}
-// 	}
-// }
+		time.Sleep(1 * time.Second)
+		if counter >= 10 {
+			quit <- struct{}{}
+			<-done
+			fmt.Printf("[client %d]: exit ok\n", i)
+			return
+		}
+	}
+}
