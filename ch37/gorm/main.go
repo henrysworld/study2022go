@@ -1,6 +1,7 @@
 package main
 
 import (
+	//"encoding/json"
 	"fmt"
 	"gorm.io/gorm/logger"
 	"net"
@@ -122,13 +123,15 @@ func main() {
 
 	//db.AutoMigrate(&Product{})
 
-	if err := db.Create(&Product{Code: "D42", Price: 100}).Error; err != nil {
+	if err := db.Create(&Product{Code: "D76", Price: 89}).Error; err != nil {
 		log.Fatalf("Create error: %v", err)
 	}
 
 	//pluckRecords(db)
-	updateRecords(db)
+	//updateRecords(db)
 
+	//distinctOrderPluckRecords(db)
+	//testPb()
 	//getCs(db)
 	//deleteRecords(db)
 	//getCs(db)
@@ -162,10 +165,10 @@ func main() {
 
 	//PrintProducts(db)
 
-	// product := &Product{}
-	// if err := db.Where("code = ?", "D42").First(&product).Error; err != nil {
-	// 	log.Fatalf("Create product error: %v", err)
-	// }
+	product := &Product{}
+	if err := db.Where("code = ?", "D42").First(&product).Error; err != nil {
+		log.Fatalf("Create product error: %v", err)
+	}
 
 	// product.Price = 200
 	// if err := db.Save(product).Error; err != nil {
@@ -185,6 +188,31 @@ func main() {
 	// PrintProducts(db)
 
 	// fmt.Println(json.Marshal(product))
+
+}
+
+func testPb() {
+	//meminfoField := proto.MemInfoField{Mem: []int32{7777}}
+	//fs := make([]*proto.MemInfoField, 0)
+	//fs = append(fs, &meminfoField)
+	//msg := &proto.ContinueMsgResponse{
+	//	Msg:          "aaa",
+	//	MemInfoField: fs,
+	//}
+	//
+	//m := jsonpb.Marshaler{
+	//	OrigName:     false,
+	//	EnumsAsInts:  false,
+	//	EmitDefaults: false,
+	//	Indent:       "",
+	//	AnyResolver:  nil,
+	//}
+	//data, _ := m.MarshalToString(msg)
+	//
+	//jsonStr := string(data)
+	//fmt.Printf("%s", jsonStr)
+
+	//{"msg":"aaa","memInfoField":[[7777]]}
 
 }
 
@@ -222,10 +250,10 @@ func deleteRecords(db *gorm.DB) {
 }
 
 func pluckRecords(db *gorm.DB) {
-	sql := `select group_concat(id) as ids from product group by code;`
-	var ids []User
-	db.Raw(sql).Pluck("ids", ids)
-	fmt.Printf("ids: %s", ids)
+	sql := `select * from product group by code;`
+	var ids []string
+	db.Raw(sql).Pluck("code", &ids)
+	fmt.Printf("ids: %v", ids)
 }
 
 func updateRecords(db *gorm.DB) {
@@ -234,6 +262,33 @@ func updateRecords(db *gorm.DB) {
 	args = append(args, "666")
 	db.Raw(sql, args)
 	db.Exec(sql, args)
+}
+
+func distinctOrderPluckRecords(db *gorm.DB) {
+	//var codes []*string
+	//if err := db.Table("product").Select("distinct(code), createdAt").Where("code=? and price = ?", "D42", 666).Order("createdAt").Pluck("code", &codes); err != nil {
+	//	fmt.Println(err)
+	//}
+	//
+	//fmt.Printf("ch==%s", codes)
+
+	//var codes []string
+	var cond []any
+	cond = append(cond, "D42")
+	cond = append(cond, 666)
+	var ps []Product
+	if err := db.Table("product").
+		Select("DISTINCT(code) as code, createdAt").
+		Where("code = ? AND price = ?", cond).
+		Order("createdAt").
+		Scan(&ps).
+		//Pluck("createdAt", &codes).
+		Error; err != nil {
+		fmt.Println(err)
+	}
+
+	fmt.Printf("codes: %+v", ps)
+
 }
 
 func updateC(db *gorm.DB) {
@@ -261,4 +316,16 @@ func PrintProducts(db *gorm.DB) {
 	for _, product := range products {
 		log.V(log.DebugLevel).Infof("code: %s, price: %d", product.Code, product.Price)
 	}
+}
+
+func (p *Product) BeforeCreate(tx *gorm.DB) (err error) {
+	fmt.Println("CH==========BeforeCreate")
+	tx.Statement.Table = "product_1"
+	//tx = tx.Table("product_1")
+	return
+}
+func (u *Product) BeforeFind(tx *gorm.DB) (err error) {
+	fmt.Println("CH==========BeforeFind")
+	//tx.Statement.Table = GetUserTable(tx.Statement.Context, u.TableName())
+	return
 }

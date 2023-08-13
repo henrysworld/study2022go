@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package v1;
 
-import "google/protobuf/timestamp.proto";
+//import "google/protobuf/timestamp.proto";
 option go_package = "github.com/henrysworld/study2022go/ch37/grpc/proto";
 
 service MiniBlog{
@@ -18,8 +18,8 @@ message UserInfo {
   string email = 3;
   string phone = 4;
   int64 postCount = 5;
-  google.protobuf.Timestamp createdAt = 6;
-  google.protobuf.Timestamp updatedAt = 7;
+//  google.protobuf.Timestamp createdAt = 6;
+//  google.protobuf.Timestamp updatedAt = 7;
 }
 
 message ListUserRequest {
@@ -42,5 +42,20 @@ message ModifierExample{
   int32 money = 7;
   int64 count = 8;
   map<string, int64> address = 9; // 编译后：`Address   map[string]string`
-  google.protobuf.Timestamp createdAt = 10;
+//  google.protobuf.Timestamp createdAt = 10;
 }
+
+//
+//message ContinueMsgResponse{
+//  string msg = 1;
+//  repeated MemInfoField memInfoField = 2;
+//}
+//message MemInfoField{
+//  repeated int32 mem = 1 [json_name = ""];
+//}
+//
+//
+//message MyMessage {
+//  string msg = 1;
+//  repeated repeated int32 memInfoField = 2;
+//}
