@@ -330,20 +330,20 @@ func TestCompensateTemperature(t *testing.T) {
 	//	temps: []float32{-1, 42.96, -1, -1},
 	//}
 
-	//task := &Task{
-	//	times: []string{"2023-08-08 23:37:16", "2023-08-08 23:38:16", "2023-08-08 23:39:06", "2023-08-08 23:39:56"},
-	//	temps: []float32{-1, -1, -1, -1},
-	//}
+	task := &Task{
+		times: []string{"2023-08-08 23:37:16", "2023-08-08 23:38:16", "2023-08-08 23:39:06", "2023-08-08 23:39:56"},
+		temps: []float32{-1, -1, -1, -1},
+	}
 
 	//task := &Task{
 	//	times: []string{"2023-08-08 23:37:16", "2023-08-08 23:38:16", "2023-08-08 23:39:06", "2023-08-08 23:39:56"},
 	//	temps: []float32{42.96, -1, -1, -1},
 	//}
 
-	task := &Task{
-		times: []string{"2023-08-08 23:37:16", "2023-08-08 23:38:16", "2023-08-08 23:39:06", "2023-08-08 23:39:56"},
-		temps: []float32{-1, -1, -1, 48.96},
-	}
+	//task := &Task{
+	//	times: []string{"2023-08-08 23:37:16", "2023-08-08 23:38:16", "2023-08-08 23:39:06", "2023-08-08 23:39:56"},
+	//	temps: []float32{-1, -1, -1, 48.96},
+	//}
 
 	CompensateTemperature(task)
 
@@ -410,6 +410,54 @@ func CompensateTemperature(task *Task) {
 		}
 	}
 
+}
+
+func CompensateTemperature1(task *Task) {
+	var start, end int = -1, -1
+
+	for i := 0; i < len(task.times); i++ {
+		if task.temps[i] != -1 {
+			if end == -1 {
+				end = i
+				for j := 0; j < end; j++ {
+					task.temps[j] = task.temps[end]
+				}
+			} else {
+				linearInterpolate(start, end, i, task)
+				start = -1
+			}
+			end = i
+		} else if start == -1 {
+			start = i
+		}
+	}
+
+	// Handle trailing "-1" temperatures
+	if start != -1 {
+		var fillValue float32
+		if end != -1 {
+			fillValue = task.temps[end]
+		}
+		for i := start; i < len(task.temps); i++ {
+			task.temps[i] = fillValue
+		}
+	}
+}
+
+func linearInterpolate(start, end, i int, task *Task) {
+	if start == -1 || end == -1 || start >= end {
+		return
+	}
+
+	x0 := Time2Unix(task.times[start-1])
+	y0 := task.temps[start-1]
+	x1 := Time2Unix(task.times[end])
+	y1 := task.temps[end]
+
+	for j := start; j < i; j++ {
+		x := Time2Unix(task.times[j])
+		task.temps[j] = linearInterpolation(x0, y0, x1, y1, x)
+	}
 }
 
 func TasksMerge(tasks []*Task) {
@@ -640,4 +688,60 @@ func generateRandomFloat32() float32 {
 
 	// 将整数部分和小数部分相加，并保留两位小数
 	return float32(integerPart) + float32(int(decimalPart*100+0.5))/100
+}
+
+// SampleMax 按照每10个点取一个最大值采样。
+func SampleMax(data []float32) []float32 {
+	if len(data) == 0 {
+		return []float32{}
+	}
+
+	const stepSize = 10
+	result := make([]float32, 0, len(data)/stepSize)
+
+	for i := 0; i < len(data); i += stepSize {
+		maxValue := data[i]
+		for j := 1; j < stepSize && i+j < len(data); j++ {
+			if data[i+j] > maxValue {
+				maxValue = data[i+j]
+			}
+		}
+		result = append(result, maxValue)
+	}
+	return result
+}
+
+func SampleMax3(data []float32) []float32 {
+	if len(data) == 0 {
+		return []float32{}
+	}
+
+	var stepSize = 0
+	result := make([]float32, 0, len(data))
+	var maxTemp float32
+	for i, datum := range data {
+		if stepSize < 9 {
+			stepSize++
+			if maxTemp < datum {
+				maxTemp = datum
+			}
+			if i == len(data)-1 {
+				result = append(result, maxTemp)
+			}
+			continue
+		}
+
+		result = append(result, maxTemp)
+		stepSize = 0
+		maxTemp = 0
+	}
+
+	return result
+}
+func TestName66(t *testing.T) {
+	data := []float32{1, 5, 9, 13, 4, 2, 7, 3, 5, 1, 5, 7, 12, 11, 7, 2, 3, 1, 4, 5, 8, 6, 3, 2, 4, 8, 10, 7, 3, 9, 1, 5, 6, 2, 7, 4, 6, 8, 2, 5, 3, 1, 4, 7, 6, 2, 3, 9, 5, 8, 1, 5, 7, 2, 6, 3, 9, 4, 5, 6, 2, 1, 4, 8, 3, 7, 5, 2, 6, 1, 4, 5, 7, 2, 3, 6, 9, 8, 7, 5, 4, 3, 2, 1}
+	sampledData := SampleMax(data)
+	sampledData3 := SampleMax3(data)
+	fmt.Println(sampledData)  // This will print the max value for each 10-element segment.
+	fmt.Println(sampledData3) // This will print the max value for each 10-element segment.
 }
