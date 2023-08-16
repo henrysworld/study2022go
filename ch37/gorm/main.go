@@ -17,12 +17,13 @@ import (
 
 type Product struct {
 	// gorm.Model
-	ID        uint64         `json:"id,omitempty" gorm:"primary_key;AUTO_INCREMENT;column:id"`
-	Code      string         `gorm:"column:code"`
-	Price     uint           `gorm:"column:price"`
-	CreatedAt time.Time      `json:"createAt,omitempty" gorm:"column:createdAt"`
-	UpdatedAt time.Time      `json:"updatedAt,omitempty" gorm:"column:updatedAt"`
-	DeletedAt gorm.DeletedAt `json:"-" gorm:"column:deletedAt;index:idx_deletedAt"`
+	ID        uint64    `json:"id,omitempty" gorm:"primary_key;AUTO_INCREMENT;column:id"`
+	Code      string    `gorm:"column:code"`
+	Price     uint      `gorm:"column:price"`
+	CreatedAt time.Time `json:"createAt,omitempty" gorm:"column:createdAt"`
+	UpdatedAt time.Time `json:"updatedAt,omitempty" gorm:"column:updatedAt"`
+	DeletedAt time.Time `json:"-" gorm:"column:deletedAt;index:idx_deletedAt"`
+	FileMd5   string    `json:"fileMd5" gorm:"column:fileMd5;index:idx_fileMd5"`
 	// DeletedAt gorm.DeletedAt `json:"-" gorm:"index;column:deletedAt"`
 }
 
@@ -123,7 +124,7 @@ func main() {
 
 	//db.AutoMigrate(&Product{})
 
-	if err := db.Create(&Product{Code: "D76", Price: 89}).Error; err != nil {
+	if err := db.Table("product_xcu").Create(&Product{Code: "D76", Price: 89, FileMd5: "zzzzzzzzz", DeletedAt: time.Now()}).Error; err != nil {
 		log.Fatalf("Create error: %v", err)
 	}
 
@@ -132,7 +133,7 @@ func main() {
 
 	//distinctOrderPluckRecords(db)
 	//testPb()
-	//getCs(db)
+	getCs(db)
 	//deleteRecords(db)
 	//getCs(db)
 
@@ -223,7 +224,7 @@ func insertC(db *gorm.DB) {
 	}
 }
 func getCs(db *gorm.DB) {
-	var products []ProductRes
+	var products []Product
 	ids := []int64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 	//var ss []string
 	//for _, id := range ids {
@@ -234,9 +235,12 @@ func getCs(db *gorm.DB) {
 	if err != nil {
 		fmt.Println(err)
 	}
+	var productsxcu []Product
+	db.Table("product_xcu").Where("id in (?)", ids).Limit(2).Find(&productsxcu)
 	//fmt.Println(products)
 	//p, _ := json.Marshal(products)
-	fmt.Printf("%+v", products)
+	fmt.Printf("1=====%+v\n", products)
+	fmt.Printf("2=====%+v\n", productsxcu)
 	//db.Row("select * from product where id in (?)", ids...).Scan(products)
 }
 

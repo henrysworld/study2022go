@@ -45,3 +45,27 @@ CREATE TABLE `product` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 
+CREATE TABLE `product_xcu` (
+   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+   `code` varchar(32) DEFAULT NULL,
+   `price` bigint(20) NOT NULL,
+   `createdAt` timestamp NOT NULL DEFAULT current_timestamp(),
+   `updatedAt` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+   `deletedAt` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+   `fileMd5` varchar(32) DEFAULT NULL,
+   PRIMARY KEY (`id`),
+   KEY `code` (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+
+CREATE TABLE `product_adnoa` (
+   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+   `code` varchar(32) DEFAULT NULL,
+   `price` bigint(20) NOT NULL,
+   `createdAt` timestamp NOT NULL DEFAULT current_timestamp(),
+   `updatedAt` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+   `deletedAt` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+   `fileMd5` varchar(32) DEFAULT NULL,
+   PRIMARY KEY (`id`),
+   KEY `code` (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
