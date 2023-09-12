@@ -69,3 +69,13 @@ CREATE TABLE `product_adnoa` (
    PRIMARY KEY (`id`),
    KEY `code` (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+
+CREATE TABLE `reporter_count` (
+                                 `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+                                 `domain` varchar(32) DEFAULT NULL,
+                                 `vin` varchar(32) DEFAULT NULL,
+                                 `create_at` bigint(20) NOT NULL,
+                                 `create_at_ts` timestamp NOT NULL DEFAULT current_timestamp(),
+                                 PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;

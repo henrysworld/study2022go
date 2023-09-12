@@ -6,6 +6,7 @@ import (
 	"gorm.io/gorm/logger"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -27,6 +28,14 @@ type Product struct {
 	// DeletedAt gorm.DeletedAt `json:"-" gorm:"index;column:deletedAt"`
 }
 
+type ReporterCount struct {
+	ID       uint64 `gorm:"primary_key;AUTO_INCREMENT;column:id" json:"ID,omitempty"`
+	Domain   string `gorm:"column:domain" json:"domain"`
+	Vin      string `gorm:"column:vin" json:"vin"`
+	CreateAt int64  `gorm:"column:create_at" json:"create_at"`
+	//CreateAtTs time.Time `gorm:"create_at_ts" json:"create_at_ts,omitempty"`
+}
+
 type ProductRes struct {
 	// gorm.Model
 	ID    uint64 `json:"id,omitempty" gorm:"primary_key;AUTO_INCREMENT;column:id"`
@@ -37,6 +46,10 @@ type ProductRes struct {
 
 func (p *Product) TableName() string {
 	return "product"
+}
+
+func (r *ReporterCount) TableName() string {
+	return "reporter_count"
 }
 
 var (
@@ -122,18 +135,20 @@ func main() {
 		log.Infof("不处于事务中")
 	}
 
+	insertReporter(db)
+
 	//db.AutoMigrate(&Product{})
 
-	if err := db.Table("product_xcu").Create(&Product{Code: "D76", Price: 89, FileMd5: "zzzzzzzzz", DeletedAt: time.Now()}).Error; err != nil {
-		log.Fatalf("Create error: %v", err)
-	}
+	//if err := db.Table("product_xcu").Create(&Product{Code: "D76", Price: 89, FileMd5: "zzzzzzzzz", DeletedAt: time.Now()}).Error; err != nil {
+	//	log.Fatalf("Create error: %v", err)
+	//}
 
 	//pluckRecords(db)
 	//updateRecords(db)
 
 	//distinctOrderPluckRecords(db)
 	//testPb()
-	getCs(db)
+	//getCs(db)
 	//deleteRecords(db)
 	//getCs(db)
 
@@ -166,10 +181,10 @@ func main() {
 
 	//PrintProducts(db)
 
-	product := &Product{}
-	if err := db.Where("code = ?", "D42").First(&product).Error; err != nil {
-		log.Fatalf("Create product error: %v", err)
-	}
+	//product := &Product{}
+	//if err := db.Where("code = ?", "D42").First(&product).Error; err != nil {
+	//	log.Fatalf("Create product error: %v", err)
+	//}
 
 	// product.Price = 200
 	// if err := db.Save(product).Error; err != nil {
@@ -215,6 +230,33 @@ func testPb() {
 
 	//{"msg":"aaa","memInfoField":[[7777]]}
 
+}
+
+func insertReporter(db *gorm.DB) {
+
+	domain := "XCU"
+	var list []*ReporterCount
+	for i := 0; i < 10; i++ {
+		if i > 4 && i < 6 {
+			domain = "FSD-A"
+		}
+		if i > 7 {
+			domain = "FSD-B"
+		}
+		rc := &ReporterCount{
+			Domain: domain,
+			Vin:    "LXM1237291371" + strconv.FormatInt(int64(i), 10),
+			//CreateAt: time.Now().UnixMilli(),
+			CreateAt: time.Now().Add(-3 * time.Hour).UnixMilli(),
+		}
+		list = append(list, rc)
+
+		time.Sleep(2 * time.Second)
+	}
+
+	if err := db.Create(list).Error; err != nil {
+		log.Fatalf("Create error: %v", err)
+	}
 }
 
 func insertC(db *gorm.DB) {
